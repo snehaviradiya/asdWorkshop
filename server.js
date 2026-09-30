@@ -1,47 +1,61 @@
 const express = require("express");
-const fs = require("fs");
+const path = require("path");
+const fs = require("fs/promises");
 
 const app = express();
 
-app.use(express.json());
+let pathToFile = path.join(__dirname, "db.json");
 
-const PORT = 3000;
+async function readMyFile() {
+    try {
+        let data = await fs.readFile(pathToFile, "utf-8");
+        const items = JSON.parse(data);
+        return items;
+    } catch (err) {
+        console.log(err);
+    }
+}
 
-// Read products from db.json
-function getProducts() {
-    const data = fs.readFileSync("db.json", "utf-8");
-    return JSON.parse(data);
+async function readFileWithDelay() {
+    await new Promise((resolve, reject) => {
+        setTimeout(resolve, 1500);
+    });
+
+    let products = await readMyFile();
+
+    return products;
 }
 
 // GET all products
-// http://localhost:3000/products
-app.get("/products", (req, res) => {
-    const products = getProducts();
+app.get("/products", async (req, res) => {
+    try {
+        let products = await readFileWithDelay();
 
-    res.json(products);
+        res.json(products);
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 // GET product by ID
-// http://localhost:3000/products/1
-// http://localhost:3000/products/2
-// http://localhost:3000/products/3
-app.get("/products/:id", (req, res) => {
-    const products = getProducts();
+app.get("/products/:id", async (req, res) => {
+    try {
+        let products = await readFileWithDelay();
 
-    const id = Number(req.params.id);
+        let { id } = req.params;
 
-    const product = products.find((p) => p.id === id);
+        id = Number(id);
 
-    if (!product) {
-        return res.status(404).json({
-            message: "Product not found"
+        products = products.find((item) => {
+            return item.id === id;
         });
-    }
 
-    res.json(product);
+        res.json(products);
+    } catch (err) {
+        console.log(err);
+    }
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+app.listen(3000, () => {
+    console.log("Server running at http://localhost:3000");
 });
